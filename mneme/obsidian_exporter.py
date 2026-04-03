@@ -4,12 +4,12 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-VAULT_PATH = Path.home() / "AI-Knowledge" / "agents" / "mneme"
+VAULT_PATH = [Path.home() / "AI-Knowledge" / "agents" / "mneme"]
 
 # ─── helpers ────────────────────────────────────────────────────────────────
 
 def _vault() -> Path:
-    p = VAULT_PATH
+    p = VAULT_PATH[0]
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -34,14 +34,27 @@ def _frontmatter(title: str, tags: list[str], entity: str = "") -> str:
 
 # ─── export functions ────────────────────────────────────────────────────────
 
+def _fact_to_dict(f):
+    if isinstance(f, dict):
+        return f
+    if isinstance(f, (tuple, list)):
+        # id, entity, category, content, importance, confidence, source, created_at, updated_at, access_ct, last_seen
+        return {
+            "id": f[0], "entity": f[1], "category": f[2], "content": f[3],
+            "importance": f[4], "confidence": f[5], "source": f[6],
+            "created_at": f[7], "updated_at": f[8], "access_ct": f[9], "last_seen": f[10],
+        }
+    return dict(f)
+
+
 def export_facts(facts, filename: str = "facts.md") -> Path:
-    """Write a fact list as a markdown note. facts can be sqlite3.Row or dict."""
+    """Write a fact list as a markdown note. facts can be sqlite3.Row, tuple, or dict."""
     vault = _vault()
     path = vault / filename
     lines = [_frontmatter("Facts", ["mneme", "facts"])]
 
     for f in facts:
-        fd = dict(f) if not isinstance(f, dict) else f
+        fd = _fact_to_dict(f)
         imp = fd.get("importance", 5)
         badge = "🔴" if imp >= 8 else "🟡" if imp >= 5 else "⚪️"
         entity = fd.get("entity", "?")
@@ -55,12 +68,20 @@ def export_facts(facts, filename: str = "facts.md") -> Path:
     return path
 
 
-def export_entity(entity: str, facts, graph_edges) -> Path:
-    """Write everything mneme knows about a single entity as a note.
+def _row_to_dict(row):
+    """Convert sqlite3.Row or tuple to dict using column names."""
+    if isinstance(row, dict):
+        return row
+    if isinstance(row, (list, tuple)):
+        # tuple — try column indices (id, subject, predicate, object, weight, source, created_at)
+        return {"id": row[0], "subject": row[1], "predicate": row[2],
+                "object": row[3], "weight": row[4], "source": row[5], "created_at": row[6]}
+    # sqlite3.Row
+    return dict(row)
 
-    facts: result of fact_store.search() — sqlite3.Row objects
-    graph_edges: result of entity_graph.query() — sqlite3.Row objects
-    """
+
+def export_entity(entity: str, facts, graph_edges) -> Path:
+    """Write everything mneme knows about a single entity as a note."""
     vault = _vault()
     path = vault / f"entity_{entity}.md"
 
@@ -71,7 +92,7 @@ def export_entity(entity: str, facts, graph_edges) -> Path:
     if facts:
         lines.append("## Facts\n")
         for f in facts:
-            f_dict = dict(f)
+            f_dict = _row_to_dict(f) if not isinstance(f, dict) else f
             imp = f_dict.get("importance", 5)
             lines.append(f"- [{imp}/10] {f_dict.get('content', '')}  ")
             lines.append(f"  _category: {f_dict.get('category', 'general')}_\n")
@@ -80,7 +101,7 @@ def export_entity(entity: str, facts, graph_edges) -> Path:
     if graph_edges:
         lines.append("\n## Relationships\n")
         for e in graph_edges:
-            e_dict = dict(e)
+            e_dict = _row_to_dict(e) if not isinstance(e, dict) else e
             pred = e_dict.get("predicate", "→")
             obj = e_dict.get("object", "?")
             weight = e_dict.get("weight", 1)
@@ -90,17 +111,18 @@ def export_entity(entity: str, facts, graph_edges) -> Path:
     return path
 
 
-def export_episode(episode: dict, events: list[dict]) -> Path:
-    """Write a single episode as a note."""
+def export_episode(episode, events) -> Path:
+    """Write a single episode as a note. episode can be dict or sqlite3.Row."""
     vault = _vault()
-    session_id = episode.get("session_id", "unknown").replace("/", "_")
+    ep_dict = _row_to_dict(episode) if not isinstance(episode, dict) else episode
+    session_id = ep_dict.get("session_id", "unknown").replace("/", "_")
     path = vault / f"episode_{session_id}.md"
 
-    started = episode.get("started_at", "")[:10]
-    summary = episode.get("summary", "")
-    importance = episode.get("importance", 5)
+    started = ep_dict.get("started_at", "")[:10]
+    summary = ep_dict.get("summary", "")
+    importance = ep_dict.get("importance", 5)
 
-    lines = [_frontmatter(f"Episode: {session_id}", ["mneme", "episode"], entity=episode.get("entity", ""))]
+    lines = [_frontmatter(f"Episode: {session_id}", ["mneme", "episode"])]
     lines.append(f"# Episode: {session_id}\n")
     lines.append(f"- **Started:** {started}")
     lines.append(f"- **Importance:** {importance}/10")
@@ -110,9 +132,10 @@ def export_episode(episode: dict, events: list[dict]) -> Path:
     if events:
         lines.append("\n## Events\n")
         for ev in events:
-            ev_type = ev.get("event_type", "?")
-            content = ev.get("content", "")
-            ts = ev.get("created_at", "")[:19]
+            ev_dict = _row_to_dict(ev) if not isinstance(ev, dict) else ev
+            ev_type = ev_dict.get("event_type", "?")
+            content = ev_dict.get("content", "")
+            ts = ev_dict.get("created_at", "")[:19]
             lines.append(f"- [{ts}] *{ev_type}:* {content}\n")
 
     path.write_text("\n".join(lines))
@@ -154,10 +177,10 @@ def export_full_dump(entity: str = "doug") -> dict[str, Path]:
     # Fetch all facts (sqlite3.Row objects)
     facts = fs.search(entity=entity, limit=100) or []
 
-    # Fetch graph edges (sqlite3.Row objects)
+    # Fetch graph edges (tuples from entity_graph.query)
     edges = eg.query(subject=entity) or []
 
-    # Fetch recent episodes
+    # Fetch recent episodes (dicts via rowdicts())
     recent_eps = eps.recent_episodes(limit=10) or []
 
     written = {}
@@ -170,15 +193,17 @@ def export_full_dump(entity: str = "doug") -> dict[str, Path]:
 
     # Export episodes
     for ep in recent_eps:
-        ep_id = ep.get("id")
+        ep_dict = _row_to_dict(ep) if not isinstance(ep, dict) else ep
+        ep_id = ep_dict.get("id")
         if ep_id:
             try:
                 ep_data = eps.get_episode(ep_id)
-                written[f"episode_{ep.get('session_id', str(ep_id)).replace('/', '_')}"] = export_episode(
-                    ep, ep_data.get("events", [])
+                session_str = ep_dict.get("session_id", str(ep_id)).replace("/", "_")
+                written[f"episode_{session_str}"] = export_episode(
+                    ep_data.get("episode"), ep_data.get("events", [])
                 )
-            except Exception:
-                pass
+            except Exception as ex:
+                print(f"    Warning: could not export episode {ep_id}: {ex}")
 
     return written
 
@@ -197,12 +222,11 @@ def cli():
 
     parser = argparse.ArgumentParser(description="Export mneme memory to an Obsidian vault")
     parser.add_argument("entity", nargs="?", default="doug", help="Entity to export (default: doug)")
-    parser.add_argument("--vault", type=Path, default=VAULT_PATH,
-                        help=f"Vault path (default: {VAULT_PATH})")
+    parser.add_argument("--vault", type=Path, default=VAULT_PATH[0],
+                        help=f"Vault path (default: {VAULT_PATH[0]})")
     args = parser.parse_args()
 
-    global VAULT_PATH
-    VAULT_PATH = args.vault
+    VAULT_PATH[0] = args.vault
 
     from mneme.fact_store import init as fs_init
     from mneme.entity_graph import init as eg_init
@@ -212,7 +236,7 @@ def cli():
     eg_init()
     eps_init()
 
-    print(f"Exporting mneme memory for '{args.entity}' to {VAULT_PATH}...")
+    print(f"Exporting mneme memory for '{args.entity}' to {VAULT_PATH[0]}...")
     result = export_full_dump(args.entity)
 
     if not result:
