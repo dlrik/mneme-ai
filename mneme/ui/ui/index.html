@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mneme — Semantic Memory</title>
+  <style>
+    :root {
+      --bg: #f7f8fc;
+      --surface: #ffffff;
+      --surface2: #f0f1f5;
+      --border: #d1d5db;
+      --accent: #4f46e5;
+      --accent2: #6366f1;
+      --text: #1f2937;
+      --text2: #6b7280;
+      --green: #16a34a;
+      --yellow: #ca8a04;
+      --red: #dc2626;
+      --purple: #9333ea;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* sidebar */
+    .sidebar {
+      width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      flex-shrink: 0;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+    }
+
+    .sidebar-logo {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+
+    .sidebar-logo h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar-logo span {
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    .sidebar nav {
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.15s;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active {
+      background: var(--surface2);
+      color: var(--accent);
+      border-left-color: var(--accent);
+    }
+
+    .nav-emoji { font-size: 16px; }
+
+    /* main */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 32px;
+    }
+
+    .header {
+      margin-bottom: 28px;
+    }
+
+    .header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .header p {
+      color: var(--text2);
+      font-size: 13px;
+    }
+
+    /* stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+    }
+
+    .stat-card .label {
+      font-size: 11px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .stat-card .sub {
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 3px;
+    }
+
+    .stat-card.green .value { color: var(--green); }
+    .stat-card.purple .value { color: var(--purple); }
+    .stat-card.yellow .value { color: var(--yellow); }
+    .stat-card.red .value { color: var(--red); }
+    .stat-card.blue .value { color: var(--accent2); }
+
+    /* panels */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* section title */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+      margin-top: 28px;
+    }
+
+    /* search bar */
+    .search-wrap {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 14px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .search-input:focus { border-color: var(--accent); }
+
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn:hover { background: var(--accent2); }
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text2);
+    }
+    .btn-ghost:hover { background: var(--border); color: var(--text); }
+
+    /* fact list */
+    .fact-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .fact-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .fact-card .imp {
+      background: var(--surface2);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text2);
+      flex-shrink: 0;
+      min-width: 28px;
+      text-align: center;
+    }
+
+    .fact-card .imp.high { color: var(--yellow); }
+    .fact-card .imp.max { color: var(--green); }
+
+    .fact-card .body { flex: 1; }
+    .fact-card .content { font-size: 13px; margin-bottom: 4px; }
+    .fact-card .meta { font-size: 11px; color: var(--text2); }
+    .fact-card .cat {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    /* graph */
+    .graph-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .edge-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 16px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .edge-card .subj { color: var(--accent2); font-weight: 600; }
+    .edge-card .pred { color: var(--text2); font-style: italic; }
+    .edge-card .obj { color: var(--green); font-weight: 600; }
+    .edge-card .weight { margin-left: auto; font-size: 11px; color: var(--text2); }
+
+    /* episodes */
+    .ep-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .ep-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 16px;
+    }
+
+    .ep-card .ep-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .ep-card .ep-meta { font-size: 11px; color: var(--text2); }
+    .ep-card .ep-summary { font-size: 12px; color: var(--text2); margin-top: 6px; font-style: italic; }
+
+    /* vec search */
+    .vec-results { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+
+    .vec-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 16px;
+    }
+
+    .vec-card .dist {
+      font-size: 11px;
+      color: var(--text2);
+      margin-bottom: 5px;
+    }
+
+    .vec-card .dist-bar {
+      height: 3px;
+      background: var(--surface2);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .vec-card .dist-fill {
+      height: 100%;
+      background: var(--purple);
+      border-radius: 2px;
+      width: 100%;
+    }
+
+    /* add fact form */
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 20px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 80px;
+      gap: 10px;
+    }
+
+    .form-row.full { grid-template-columns: 1fr; }
+
+    .form-input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+    }
+
+    .form-input:focus { border-color: var(--accent); }
+
+    /* empty state */
+    .empty {
+      text-align: center;
+      padding: 40px;
+      color: var(--text2);
+      font-size: 13px;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--text2);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+    .flash {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--green);
+      color: white;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .flash.show { opacity: 1; }
+
+    /* detail panel */
+    .detail-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 100;
+      display: none;
+      align-items: flex-start;
+      justify-content: flex-end;
+    }
+
+    .detail-overlay.open { display: flex; }
+
+    .detail-panel {
+      width: 480px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+      animation: slideIn 0.2s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(30px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .detail-close {
+      float: right;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 12px;
+      cursor: pointer;
+      color: var(--text2);
+      font-size: 12px;
+    }
+
+    .detail-close:hover { background: var(--border); color: var(--text); }
+
+    .detail-section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      clear: both;
+    }
+
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text2);
+      margin-bottom: 10px;
+    }
+
+    .detail-fact-content {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .detail-meta {
+      font-size: 12px;
+      color: var(--text2);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .detail-chip {
+      background: var(--accent);
+      color: white;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .detail-chip.green { background: var(--green); }
+    .detail-chip.purple { background: var(--purple); }
+    .detail-chip.yellow { background: var(--yellow); color: white; }
+
+    .derive-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 13px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .derive-item .label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+    .derive-item .value { color: var(--text); }
+    .derive-item .value.subj { color: var(--accent); font-weight: 600; }
+    .derive-item .value.pred { color: var(--text2); font-style: italic; }
+    .derive-item .value.obj { color: var(--green); font-weight: 600; }
+    .derive-item .value.dist { color: var(--purple); }
+
+    .derive-item .mini-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .derive-item .mini-fill {
+      height: 100%;
+      background: var(--purple);
+      border-radius: 2px;
+    }
+
+    .derive-loading {
+      text-align: center;
+      padding: 20px;
+      color: var(--text2);
+      font-size: 13px;
+    }
+
+    .derive-empty {
+      text-align: center;
+      padding: 16px;
+      color: var(--text2);
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    .similar-chip {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      margin: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .similar-chip:hover { background: var(--accent); color: white; border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <h1>MNEME</h1>
+    <span>Semantic Memory for AI Agents</span>
+  </div>
+  <nav>
+    <div class="nav-item active" data-panel="dashboard">
+      <span class="nav-emoji">📊</span> Dashboard
+    </div>
+    <div class="nav-item" data-panel="facts">
+      <span class="nav-emoji">🗂️</span> Facts
+    </div>
+    <div class="nav-item" data-panel="graph">
+      <span class="nav-emoji">🔗</span> Entity Graph
+    </div>
+    <div class="nav-item" data-panel="episodes">
+      <span class="nav-emoji">📅</span> Episodes
+    </div>
+    <div class="nav-item" data-panel="search">
+      <span class="nav-emoji">🔍</span> Vector Search
+    </div>
+    <div class="nav-item" data-panel="journal">
+      <span class="nav-emoji">📝</span> Project Journal
+    </div>
+  </nav>
+</div>
+
+<div class="main">
+  <!-- DASHBOARD -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="header">
+      <h2>Dashboard</h2>
+      <p>Mneme — always on, never forgets</p>
+    </div>
+    <div class="stats">
+      <div class="stat-card green">
+        <div class="label">Facts</div>
+        <div class="value" id="stat-facts">—</div>
+        <div class="sub">structured</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="label">Vectors</div>
+        <div class="value" id="stat-vectors">—</div>
+        <div class="sub">embedded</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="label">Episodes</div>
+        <div class="value" id="stat-episodes">—</div>
+        <div class="sub">sessions</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Graph Edges</div>
+        <div class="value" id="stat-edges">—</div>
+        <div class="sub">relationships</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="label">Last Sync</div>
+        <div class="value" id="stat-sync">—</div>
+        <div class="sub" id="stat-sync-detail">—</div>
+      </div>
+    </div>
+
+    <div class="section-title">Recent Facts</div>
+    <div id="recent-facts" class="fact-list"></div>
+  </div>
+
+  <!-- FACTS -->
+  <div class="panel" id="panel-facts">
+    <div class="header">
+      <h2>Facts</h2>
+      <p>Structured memory — entity, category, importance</p>
+    </div>
+
+    <div class="add-form">
+      <div class="form-row">
+        <input class="form-input" id="f-entity" placeholder="entity (e.g. doug)" />
+        <input class="form-input" id="f-category" placeholder="category (e.g. preference)" />
+        <input class="form-input" id="f-importance" type="number" min="1" max="10" value="5" placeholder="importance" />
+      </div>
+      <div class="form-row full">
+        <input class="form-input" id="f-content" placeholder="What to remember..." />
+      </div>
+      <div class="form-row full">
+        <button class="btn" onclick="addFact()">Store Fact</button>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <input class="search-input" id="facts-search" placeholder="Search facts..." oninput="loadFacts()" />
+    </div>
+    <div id="facts-list" class="fact-list"></div>
+  </div>
+
+  <!-- GRAPH -->
+  <div class="panel" id="panel-graph">
+    <div class="header">
+      <h2>Entity Graph</h2>
+      <p>Who knows what about whom</p>
+    </div>
+
+    <div class="add-form">
+      <div class="form-row">
+        <input class="form-input" id="g-subject" placeholder="subject (e.g. doug)" />
+        <input class="form-input" id="g-predicate" placeholder="predicate (e.g. likes)" />
+        <input class="form-input" id="g-object" placeholder="object (e.g. coffee)" />
+      </div>
+      <div class="form-row full">
+        <button class="btn" onclick="addEdge()">Add Relationship</button>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <input class="search-input" id="graph-search" placeholder="Filter by subject or object..." oninput="loadGraph()" />
+    </div>
+    <div id="graph-list" class="graph-list"></div>
+  </div>
+
+  <!-- EPISODES -->
+  <div class="panel" id="panel-episodes">
+    <div class="header">
+      <h2>Episodes</h2>
+      <p>Session timelines and summaries</p>
+    </div>
+    <div id="episodes-list" class="ep-list"></div>
+  </div>
+
+  <!-- VEC SEARCH -->
+  <div class="panel" id="panel-search">
+    <div class="header">
+      <h2>Semantic Search</h2>
+      <p>ANN vector search — Voyage AI + Chroma</p>
+    </div>
+    <div class="search-wrap">
+      <input class="search-input" id="vec-query" placeholder="Ask anything... e.g. 'what does Doug like?'" />
+      <button class="btn" onclick="doVecSearch()">Search</button>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" onclick="document.getElementById('vec-results').style.display='block'; this.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); this.classList.add('active')">Results</div>
+    </div>
+    <div id="vec-results" class="vec-results"></div>
+  </div>
+
+  <!-- JOURNAL -->
+  <div class="panel" id="panel-journal">
+    <div class="header">
+      <h2>Project Journal</h2>
+      <p>How Mneme was built — the real story</p>
+    </div>
+    <div id="journal-list" class="fact-list"></div>
+  </div>
+</div>
+
+<div class="flash" id="flash">Saved!</div>
+
+<!-- Detail slide-out panel -->
+<div class="detail-overlay" id="detail-overlay" onclick="if(event.target===this)closeDetail()">
+  <div class="detail-panel">
+    <button class="detail-close" onclick="closeDetail()">✕ Close</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<script>
+const API = ''; // same origin
+
+function api(method, path, body) {
+  return fetch(API + path, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(r => r.json()).catch(e => ({ error: e.message }));
+}
+
+function flash(msg) {
+  const el = document.getElementById('flash');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// nav
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + el.dataset.panel).classList.add('active');
+    if (el.dataset.panel === 'dashboard') loadDashboard();
+    if (el.dataset.panel === 'facts') loadFacts();
+    if (el.dataset.panel === 'graph') loadGraph();
+    if (el.dataset.panel === 'episodes') loadEpisodes();
+    if (el.dataset.panel === 'journal') loadJournal();
+  });
+});
+
+// dashboard
+async function loadDashboard() {
+  const [facts, vec, eps, sync] = await Promise.all([
+    api('GET', '/facts?limit=100'),
+    api('GET', '/vec/count'),
+    api('GET', '/episodes/recent?limit=100'),
+    api('GET', '/vec/sync/status'),
+  ]);
+
+  document.getElementById('stat-facts').textContent = facts.count ?? 0;
+  document.getElementById('stat-vectors').textContent = vec.count ?? 0;
+  document.getElementById('stat-episodes').textContent = eps.count ?? 0;
+
+  // last sync — show relative time
+  const syncTime = sync.last_sync ? timeAgo(sync.last_sync) : 'never';
+  const syncEl = document.getElementById('stat-sync');
+  syncEl.textContent = syncTime;
+  const syncDetail = document.getElementById('stat-sync-detail');
+  if (sync.last_error) {
+    syncDetail.textContent = `error: ${sync.last_error}`;
+    syncEl.style.color = 'var(--red)';
+  } else {
+    syncDetail.textContent = sync.consecutive_errors > 0 ? `⚠ ${sync.consecutive_errors} failures` : '✓ ok';
+    syncEl.style.color = '';
+  }
+
+  // recent facts
+  const el = document.getElementById('recent-facts');
+  if (!facts.results?.length) {
+    el.innerHTML = '<div class="empty">No facts yet</div>';
+  } else {
+    el.innerHTML = facts.results.slice(0, 5).map(f => factHTML(f)).join('');
+  }
+}
+
+function timeAgo(isoString) {
+  const diff = (Date.now() - new Date(isoString).getTime()) / 1000;
+  if (diff < 60) return Math.floor(diff) + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+// facts
+async function loadFacts() {
+  const q = document.getElementById('facts-search').value;
+  const res = await api('GET', '/facts?limit=50' + (q ? '&query=' + encodeURIComponent(q) : ''));
+  const el = document.getElementById('facts-list');
+  if (!res.results?.length) {
+    el.innerHTML = '<div class="empty">No facts found</div>';
+  } else {
+    el.innerHTML = res.results.map(f => factHTML(f)).join('');
+  }
+}
+
+function factHTML(f) {
+  const impClass = f.importance >= 8 ? 'max' : f.importance >= 6 ? 'high' : '';
+  return `<div class="fact-card" style="cursor:pointer" onclick="openDetail('${esc(f.entity)}', '${esc(f.content)}', '${esc(f.category)}', ${f.importance}, '${f.created_at?.split('T')[0] ?? ''}')">
+    <div class="imp ${impClass}">${f.importance}</div>
+    <div class="body">
+      <div class="content">${esc(f.content)}</div>
+      <div class="meta">
+        <span class="cat">${esc(f.category)}</span>
+        ${esc(f.entity)} · ${f.created_at?.split('T')[0] ?? ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+async function openDetail(entity, content, category, importance, date) {
+  const el = document.getElementById('detail-content');
+  el.innerHTML = `
+    <div style="margin-top:4px">
+      <div class="detail-fact-content">${esc(content)}</div>
+      <div class="detail-meta">
+        <span class="detail-chip">${esc(category)}</span>
+        <span class="detail-chip ${importance >= 7 ? 'green' : importance >= 5 ? 'yellow' : ''}">imp: ${importance}/10</span>
+        <span>${esc(entity)}</span>
+        <span>${date}</span>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">🔗 Graph Neighbors</div>
+      <div id="derive-graph"><div class="derive-loading">Loading...</div></div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">🔍 Semantic Neighbors</div>
+      <div id="derive-vec"><div class="derive-loading">Loading...</div></div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">💬 Related Episodes</div>
+      <div id="derive-episodes"><div class="derive-loading">Loading...</div></div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">📚 All Facts About ${esc(entity)}</div>
+      <div id="derive-allfacts"><div class="derive-loading">Loading...</div></div>
+    </div>
+  `;
+
+  document.getElementById('detail-overlay').classList.add('open');
+
+  // Load all in parallel
+  loadGraphNeighbors(entity, el);
+  loadVecRelated(content, el);
+  loadEntityEpisodes(entity, el);
+  loadEntityFacts(entity, el);
+}
+
+async function loadGraphNeighbors(entity, el) {
+  const res = await api('GET', '/graph/neighbors?entity=' + encodeURIComponent(entity));
+  const div = document.getElementById('derive-graph');
+  if (!res.edges?.length) {
+    div.innerHTML = '<div class="derive-empty">No relationships found</div>';
+  } else {
+    div.innerHTML = res.edges.map(e => `<div class="derive-item">
+      <div class="label">${e.subject} --${e.predicate}--></div>
+      <div class="value">${e.object}</div>
+    </div>`).join('');
+  }
+}
+
+async function loadVecRelated(content, el) {
+  const res = await api('GET', '/vec/related?content=' + encodeURIComponent(content) + '&top_k=5');
+  const div = document.getElementById('derive-vec');
+  if (!res.hits?.length) {
+    div.innerHTML = '<div class="derive-empty">No similar chunks</div>';
+  } else {
+    const maxD = Math.max(...res.hits.map(h => h.distance));
+    div.innerHTML = res.hits.map(h => {
+      const pct = maxD > 0 ? Math.round((1 - h.distance / maxD) * 100) : 100;
+      return `<div class="derive-item">
+        <div class="label">similarity: ${pct}%</div>
+        <div class="value">${esc(h.content)}</div>
+        <div class="mini-bar"><div class="mini-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  }
+}
+
+async function loadEntityEpisodes(entity, el) {
+  const res = await api('GET', '/episodes/for_entity?entity=' + encodeURIComponent(entity));
+  const div = document.getElementById('derive-episodes');
+  if (!res.episodes?.length) {
+    div.innerHTML = '<div class="derive-empty">No episodes found</div>';
+  } else {
+    div.innerHTML = res.episodes.map(ep => `<div class="derive-item">
+      <div class="label">${ep.session_id} — ${ep.started_at?.split('T')[0] ?? ''}</div>
+      <div class="value">${esc(ep.summary || '(no summary)')}</div>
+    </div>`).join('');
+  }
+}
+
+async function loadEntityFacts(entity, el) {
+  const res = await api('GET', '/facts?entity=' + encodeURIComponent(entity) + '&limit=20');
+  const div = document.getElementById('derive-allfacts');
+  if (!res.results?.length) {
+    div.innerHTML = '<div class="derive-empty">No facts found</div>';
+  } else {
+    div.innerHTML = res.results.map(f => `<div class="derive-item" style="cursor:pointer" onclick="openDetail('${esc(f.entity)}','${esc(f.content)}','${esc(f.category)}',${f.importance},'${f.created_at?.split('T')[0]??''}')">
+      <div class="label">${esc(f.category)} · imp ${f.importance}</div>
+      <div class="value">${esc(f.content)}</div>
+    </div>`).join('');
+  }
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+}
+
+async function addFact() {
+  const entity = document.getElementById('f-entity').value.trim();
+  const category = document.getElementById('f-category').value.trim() || 'general';
+  const content = document.getElementById('f-content').value.trim();
+  const importance = parseInt(document.getElementById('f-importance').value) || 5;
+  if (!entity || !content) return;
+  await api('POST', '/facts', { entity, category, content, importance, confidence: 0.9 });
+  document.getElementById('f-content').value = '';
+  flash('Fact stored!');
+  loadFacts();
+  loadDashboard();
+}
+
+// graph
+async function loadGraph() {
+  const res = await api('GET', '/graph/know?who=' + (document.getElementById('graph-search').value || 'doug'));
+  const el = document.getElementById('graph-list');
+  if (!res.edges?.length) {
+    el.innerHTML = '<div class="empty">No relationships yet</div>';
+  } else {
+    el.innerHTML = res.edges.map(e => `<div class="edge-card">
+      <span class="subj">${esc(e.subject)}</span>
+      <span class="pred">${esc(e.predicate)}</span>
+      <span class="obj">${esc(e.object)}</span>
+      <span class="weight">${Math.round((e.weight || 1) * 100)}%</span>
+    </div>`).join('');
+  }
+}
+
+async function addEdge() {
+  const subject = document.getElementById('g-subject').value.trim();
+  const predicate = document.getElementById('g-predicate').value.trim();
+  const object = document.getElementById('g-object').value.trim();
+  if (!subject || !predicate || !object) return;
+  await api('POST', '/graph', { subject, predicate, object });
+  flash('Edge added!');
+  loadGraph();
+}
+
+// episodes
+async function loadEpisodes() {
+  const res = await api('GET', '/episodes/recent?limit=20');
+  const el = document.getElementById('episodes-list');
+  if (!res.episodes?.length) {
+    el.innerHTML = '<div class="empty">No episodes yet</div>';
+  } else {
+    el.innerHTML = res.episodes.map(ep => `<div class="ep-card">
+      <div class="ep-title">Session: ${esc(ep.session_id)}</div>
+      <div class="ep-meta">${ep.started_at?.split('T')[0] ?? ''} · importance: ${ep.importance}</div>
+      ${ep.summary ? `<div class="ep-summary">${esc(ep.summary)}</div>` : ''}
+    </div>`).join('');
+  }
+}
+
+async function loadJournal() {
+  const res = await api('GET', '/facts?entity=memory_core&limit=50');
+  const el = document.getElementById('journal-list');
+  if (!res.results?.length) {
+    el.innerHTML = '<div class="empty">No journal entries yet</div>';
+  } else {
+    el.innerHTML = res.results.map(f => {
+      const impClass = f.importance >= 9 ? 'max' : f.importance >= 7 ? 'high' : '';
+      return `<div class="fact-card" style="cursor:pointer" onclick="openDetail('${esc(f.entity)}','${esc(f.content)}','${esc(f.category)}',${f.importance},'${f.created_at?.split('T')[0]??''}')">
+        <div class="imp ${impClass}">${f.importance}</div>
+        <div class="body">
+          <div class="content">${esc(f.content)}</div>
+          <div class="meta">
+            <span class="cat">${esc(f.category)}</span>
+            fid ${f.id} · ${f.created_at?.split('T')[0] ?? ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// vec search
+async function doVecSearch() {
+  const q = document.getElementById('vec-query').value.trim();
+  if (!q) return;
+  const res = await api('POST', '/vec/search', { query: q, top_k: 5 });
+  const el = document.getElementById('vec-results');
+  if (!res.hits?.length) {
+    el.innerHTML = '<div class="empty">No results found</div>';
+  } else {
+    const maxDist = Math.max(...res.hits.map(h => h.distance));
+    el.innerHTML = res.hits.map(h => {
+      const bar = maxDist > 0 ? Math.round((1 - h.distance / maxDist) * 100) : 100;
+      return `<div class="vec-card">
+        <div class="dist">distance: ${h.distance?.toFixed(4)} — ${bar}% similar</div>
+        <div class="content">${esc(h.content)}</div>
+        ${h.metadata ? `<div class="meta">
+          <span class="cat">${esc(h.metadata.category || 'general')}</span>
+          ${esc(h.metadata.entity || '')}
+        </div>` : ''}
+        <div class="dist-bar"><div class="dist-fill" style="width:${bar}%"></div></div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// load on start
+loadDashboard();
+</script>
+</body>
+</html>
